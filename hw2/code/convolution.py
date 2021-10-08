@@ -16,28 +16,42 @@ def conv2d(inputs, filters, strides, padding):
 	:return: outputs, NumPy array or Tensor with shape [num_examples, output_height, output_width, output_channels]
 	"""
 	num_examples = len(inputs)
-	in_height = None
-	in_width = None
-	input_in_channels = None
+	in_height = inputs.shape[1]
+	in_width = inputs.shape[2]
+	input_in_channels = inputs.shape[3]
 
-	filter_height = None
-	filter_width = None
-	filter_in_channels = None
-	filter_out_channels = None
+	filter_height = filters.shape[0]
+	filter_width = filters.shape[1]
+	filter_in_channels = filters.shape[2]
+	filter_out_channels = filters.shape[3]
 
-	num_examples_stride = 1
-	strideY = 1
-	strideX = 1
-	channels_stride = 1
+	num_examples_stride = strides[0]
+	strideY = strides[1]
+	strideX = strides[2]
+	channels_stride = strides[3]
 
 	# Cleaning padding input
 
 	# Calculate output dimensions
-
-	(in_height-filter_height)/strideX+1
-	(in_width-filter_width)/strideY+1
-
-	return outputs
+	assert(input_in_channels==filter_in_channels)
+	out_height=0
+	out_width=0
+	if(padding=="SAME"):
+		pad_width=math.floor((filter_height-1)/2)
+		out_height=in_height
+		out_width=in_width
+	else:
+		pad_width=0
+		out_height=inputs.shape[1]-filter_width+1
+		out_width=inputs.shape[2]-filter_height+1
+	padding=np.pad(inputs,pad_width,mode='edge')
+	output=np.zeros((num_examples,out_height,out_width,filter_out_channels))
+	filter1=tf.transpose(filters,perm=[3,0,1,2])
+	for k in range(num_examples):
+		for j in range(out_height):
+			for i in range(out_width):
+				output[k,j,i]=np.sum((padding[k,j:j+filter_width,i:i+filter_height]*filter1),axis=(0,1,2))
+	return output
 
 
 def same_test_0():
@@ -107,6 +121,11 @@ def valid_test_2():
 
 def main():
 	# TODO: Add in any tests you may want to use to view the differences between your and TensorFlow's output
+
+	same_test_0()
+	valid_test_0()
+	valid_test_1()
+	valid_test_2()
 
 	return
 

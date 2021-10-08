@@ -70,8 +70,11 @@ class Model(tf.keras.Model):
         #(100,3,3,20)
 
 #layer3
-        layer3c=tf.nn.conv2d(layer2m, self.W3, strides=[1, 1, 1, 1], padding='SAME')
-        #(100,3,3,20)
+        if(is_testing==True):
+            layer3c=conv2d(layer2m,self.W3, strides=[1, 1, 1, 1], padding='SAME')
+        else:
+            layer3c=tf.nn.conv2d(layer2m, self.W3, strides=[1, 1, 1, 1], padding='SAME')
+            #(100,3,3,20)
         layer3b=tf.nn.bias_add(layer3c, self.b3)
         mean3,variance3=tf.nn.moments(layer3b, [0,1,2])
         layer3n=tf.nn.batch_normalization(layer3b, mean3, variance3,offset=None,scale=None,variance_epsilon=1e-5)
