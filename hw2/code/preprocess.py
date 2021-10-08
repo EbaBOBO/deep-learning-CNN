@@ -46,3 +46,27 @@ def get_data(file_path, first_class, second_class):
 	inputs = unpickled_file[b'data']
 	labels = unpickled_file[b'labels']
 	# TODO: Do the rest of preprocessing! 
+	input1=[]
+	label1=[]
+	for i in range(len(labels)):
+		if(labels[i]==first_class or labels[i]==second_class):
+			input1.append(inputs[i])
+		else:
+			labels[i]=0
+	labels=np.array(labels)
+	label1=labels[np.nonzero(labels)]
+	inputs=tf.reshape(input1, (-1, 3, 32 ,32))
+	inputs=tf.transpose(inputs, perm=[0,2,3,1])
+	inputs=np.float32(inputs)/255
+	label2=[]
+	for i in range(len(label1)):
+		if(label1[i]==second_class):
+			label1[i]=1
+		else:
+			label1[i]=0
+	label2=tf.one_hot(label1,2)
+	# print(inputs.shape) (10000,32,32,3)
+	# print(label2.shape) (10000,2)
+	return inputs,label2
+
+# get_data('/Users/zccc/1470projects/project2/data/train',3,5)

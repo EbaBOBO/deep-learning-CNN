@@ -15,7 +15,7 @@ def conv2d(inputs, filters, strides, padding):
 	:param padding: either "SAME" or "VALID", capitalization matters
 	:return: outputs, NumPy array or Tensor with shape [num_examples, output_height, output_width, output_channels]
 	"""
-	num_examples = None
+	num_examples = len(inputs)
 	in_height = None
 	in_width = None
 	input_in_channels = None
@@ -25,16 +25,20 @@ def conv2d(inputs, filters, strides, padding):
 	filter_in_channels = None
 	filter_out_channels = None
 
-	num_examples_stride = None
-	strideY = None
-	strideX = None
-	channels_stride = None
+	num_examples_stride = 1
+	strideY = 1
+	strideX = 1
+	channels_stride = 1
 
 	# Cleaning padding input
 
 	# Calculate output dimensions
 
-	pass
+	(in_height-filter_height)/strideX+1
+	(in_width-filter_width)/strideY+1
+
+	return outputs
+
 
 def same_test_0():
 	'''

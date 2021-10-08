@@ -18,12 +18,23 @@ class Model(tf.keras.Model):
         """
         super(Model, self).__init__()
 
-        self.batch_size = None
-        self.num_classes = None
+        self.batch_size = 100
+        self.num_classes = 2
         self.loss_list = [] # Append losses to this list in training so you can visualize loss vs time in main
 
         # TODO: Initialize all hyperparameters
-
+        self.W1 = tf.Variable(tf.random.truncated_normal([5,5,3,16], stddev=0.1))
+        self.W2 = tf.Variable(tf.random.truncated_normal([5,5,16,20], stddev=0.1))
+        self.W3 = tf.Variable(tf.random.truncated_normal([3,3,20,20], stddev=0.1)) 
+        self.Wdense1 = tf.Variable(tf.random.truncated_normal([3*3*20,80], stddev=0.1))     
+        self.Wdense2 = tf.Variable(tf.random.truncated_normal([80,20], stddev=0.1)) 
+        self.Wdense3 = tf.Variable(tf.random.truncated_normal([20,2], stddev=0.1))         
+        self.b1 = tf.Variable(tf.random.normal(shape=[16], stddev=0.1, dtype=tf.float32))
+        self.b2 = tf.Variable(tf.random.normal(shape=[20], stddev=0.1, dtype=tf.float32))
+        self.b3 = tf.Variable(tf.random.normal(shape=[20], stddev=0.1, dtype=tf.float32))
+        self.bdense1 = tf.Variable(tf.random.truncated_normal([80], stddev=0.1))     
+        self.bdense2 = tf.Variable(tf.random.truncated_normal([20], stddev=0.1)) 
+        self.bdense3 = tf.Variable(tf.random.truncated_normal([2], stddev=0.1))
         # TODO: Initialize all trainable parameters
 
     def call(self, inputs, is_testing=False):
@@ -38,8 +49,46 @@ class Model(tf.keras.Model):
         # shape of input = (num_inputs (or batch_size), in_height, in_width, in_channels)
         # shape of filter = (filter_height, filter_width, in_channels, out_channels)
         # shape of strides = (batch_stride, height_stride, width_stride, channels_stride)
+#layer1
+        layer1c=tf.nn.conv2d(inputs, self.W1, strides=[1, 2, 2, 1], padding='SAME')
+        #(100,16,16,16)
+        layer1b=tf.nn.bias_add(layer1c, self.b1)
+        mean1,variance1=tf.nn.moments(layer1b, [0,1,2])
+        layer1n=tf.nn.batch_normalization(layer1b, mean1, variance1,offset=None,scale=None,variance_epsilon=1e-5)
+        layer1r=tf.nn.relu(layer1n)
+        layer1m=tf.nn.max_pool(layer1r, ksize=3, strides=2, padding="VALID")
+        #(100,7,7,16)
 
-        pass
+#layer2
+        layer2c = tf.nn.conv2d(layer1m, self.W2, strides=[1, 1, 1, 1], padding='SAME')
+        #(100,7,7,20)
+        layer2b=tf.nn.bias_add(layer2c, self.b2)
+        mean2,variance2=tf.nn.moments(layer2b, [0,1,2])
+        layer2n=tf.nn.batch_normalization(layer2b, mean2, variance2,offset=None,scale=None,variance_epsilon=1e-5)
+        layer2r=tf.nn.relu(layer2n)
+        layer2m=tf.nn.max_pool(layer2r, ksize=2, strides=2, padding="VALID")
+        #(100,3,3,20)
+
+#layer3
+        layer3c=tf.nn.conv2d(layer2m, self.W3, strides=[1, 1, 1, 1], padding='SAME')
+        #(100,3,3,20)
+        layer3b=tf.nn.bias_add(layer3c, self.b3)
+        mean3,variance3=tf.nn.moments(layer3b, [0,1,2])
+        layer3n=tf.nn.batch_normalization(layer3b, mean3, variance3,offset=None,scale=None,variance_epsilon=1e-5)
+        layer3r=tf.nn.relu(layer3n)
+#dense layer        
+        num_inputs=inputs.shape[0]
+        dense_input1=tf.reshape(layer3r,[num_inputs,3*3*20])
+        dense_layer1d=tf.add(tf.matmul(dense_input1,self.Wdense1), self.bdense1)
+        dense_layer1=tf.nn.dropout(dense_layer1d, 0.3)
+
+        dense_layer2d=tf.add(tf.matmul(dense_layer1,self.Wdense2), self.bdense2)
+        dense_layer2=tf.nn.dropout(dense_layer2d, 0.3)
+
+        dense_layer3=tf.add(tf.matmul(dense_layer2,self.Wdense3), self.bdense3)
+        # (100,2)
+
+        return dense_layer3
 
     def loss(self, logits, labels):
         """
@@ -51,8 +100,8 @@ class Model(tf.keras.Model):
         :param labels: during training, matrix of shape (batch_size, self.num_classes) containing the train labels
         :return: the loss of the model as a Tensor
         """
-
-        pass
+        # print('loss')
+        return tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels, logits))/len(logits)
 
     def accuracy(self, logits, labels):
         """
@@ -84,8 +133,27 @@ def train(model, train_inputs, train_labels):
     shape (num_labels, num_classes)
     :return: Optionally list of losses per batch to use for visualize_loss
     '''
+    print('train')
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    seeds=[s for s in range(len(train_inputs))]
 
-    pass
+    index=tf.random.shuffle(seeds)
+    train_inputs1=tf.gather(train_inputs,index,axis=0)
+    train_labels1=tf.gather(train_labels,index,axis=0)
+    train_inputs2=tf.image.random_flip_left_right(train_inputs1, 6).numpy()
+    loss1=[]
+    for i in range(int(len(train_inputs)/model.batch_size)):
+  # Implement backprop:
+        with tf.GradientTape() as tape:
+            logits=model.call(train_inputs2[i*model.batch_size:(i+1)*model.batch_size])
+            losses=model.loss(logits,train_labels1[i*model.batch_size:(i+1)*model.batch_size])
+            loss1.append(losses)
+      
+        gradients = tape.gradient(losses, model.trainable_variables)
+        # print(gradients)
+        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+    return loss1
 
 def test(model, test_inputs, test_labels):
     """
@@ -99,8 +167,10 @@ def test(model, test_inputs, test_labels):
     :return: test accuracy - this should be the average accuracy across
     all batches
     """
-
-    pass
+    # print('test')
+    logits = model.call(test_inputs)
+    accu = model.accuracy(logits,test_labels)
+    return accu
 
 
 def visualize_loss(losses): 
@@ -184,9 +254,14 @@ def main():
     
     :return: None
     '''
+    train_inputs,train_labels=get_data('/Users/zccc/1470projects/project2/data/train',3,5)
+    test_inputs,test_labels=get_data('/Users/zccc/1470projects/project2/data/test',3,5)
+    obj=Model()
+    for i in range(10):
+        train(obj,train_inputs,train_labels)
 
-    return
-
+    accu = test(obj,test_inputs,test_labels)
+    print('The accuracy is %f'%accu)
 
 if __name__ == '__main__':
     main()
