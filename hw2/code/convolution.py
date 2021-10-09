@@ -33,30 +33,24 @@ def conv2d(inputs, filters, strides, padding):
 	# Cleaning padding input
 
 	# Calculate output dimensions
+
 	assert(input_in_channels==filter_in_channels)
 	out_height=0
 	out_width=0
 	if(padding=="SAME"):
 		pad_width=math.floor((filter_height-1)/2)
-
 	else:
 		pad_width=0
-		# out_height=inputs.shape[1]-filter_width+1
-		# out_width=inputs.shape[2]-filter_height+1
 	out_height=int((in_height + 2*pad_width - filter_height) / strideY + 1)
-	print(out_height)
 	out_width=int((in_width + 2*pad_width - filter_width) / strideX + 1)
 	padding=np.pad(inputs,math.floor(pad_width),mode='edge')
-	# print(padding)
 	output=np.zeros((num_examples,out_height,out_width,filter_out_channels))
 	filter1=tf.transpose(filters,perm=[3,0,1,2])
 	for k in range(num_examples):
-		# for j in range(padding.shape[1]-filter_height+1):
-		# 	for i in range(padding.shape[2]-filter_width+1):
-		# 		output[k,j,i]=np.sum((padding[k,j:j+filter_width,i:i+filter_height]*filter1),axis=(1,2,3))
-		for j in range(out_height):
-			for i in range(out_width):
-				output[k,j,i]=np.sum((padding[k,j:j+filter_width,i:i+filter_height]*filter1),axis=(0,1,2))
+		inputs1=inputs[k]
+		for j in range(inputs1.shape[0]-filter_height+1):
+			for i in range(inputs1.shape[1]-filter_width+1):
+				output[k,j,i]=np.sum((inputs1[j:j+filter_width,i:i+filter_height]*filter1),axis=(1,2,3))
 	return output
 
 
@@ -75,8 +69,7 @@ def same_test_0():
 								name="filters")
 	my_conv = conv2d(imgs, filters, strides=[1, 1, 1, 1], padding="SAME")
 	tf_conv = tf.nn.conv2d(imgs, filters, [1, 1, 1, 1], padding="SAME")
-	# print("SAME_TEST_0:", "my conv2d:", my_conv[0][0][0], "tf conv2d:", tf_conv[0][0][0].numpy())
-	print("SAME_TEST_0:", "my conv2d:", my_conv, "tf conv2d:", tf_conv.numpy())
+	print("SAME_TEST_0:", "my conv2d:", my_conv[0][0][0], "tf conv2d:", tf_conv[0][0][0].numpy())
 
 def valid_test_0():
 	'''
